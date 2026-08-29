@@ -1,5 +1,11 @@
 # Game Stick Lite M8 v6 — External Game Database Builder / DATA03 Patcher
 
+GitHub Repository:
+https://github.com/andrade-anderson/GameStick-M8-V6-Toolkit
+
+Latest Release / Download:
+https://github.com/andrade-anderson/GameStick-M8-V6-Toolkit/releases/tag/v2.0
+
 I put together a small Python toolkit for compatible **Game Stick Lite M8 v6** firmware.
 
 The main purpose is to make it easier to add or replace ROM files and rebuild the game list without relying on the old DBMaker packages that are difficult to find or download.
