@@ -1,39 +1,54 @@
-# Game Stick Lite M8 v6 Toolkit
+## v3.0.1 update
 
-A small Python toolkit for compatible **Game Stick Lite M8 v6** firmware.
+Mega Drive / Genesis database scanning now recognizes:
 
-It was created to solve a common problem on M8 v6 sticks: after adding or replacing ROM files, the console may not automatically rebuild the game list. This toolkit redirects the firmware to an external SQLite game database on the SD card and provides a database builder that scans the ROM folders.
+- `.bin`
+- `.md`
+- `.gen`
+- `.smd`
 
-It also fixes ROM filenames that contain **more than one dot**, renames matching cover images, and updates PS1 `.cue` references when needed.
+All four formats use the existing M8 Mega Drive mapping:
 
-> **Important:** This is **not** a universal Game Stick tool. It is intended only for compatible **M8 v6** firmware using the database layout described below.
+```text
+class_type = 5
+emu_type   = 2
+```
+
+After adding or removing ROMs, run:
+
+```text
+3 - Build / rebuild game database
+```
+
+Compressed `.zip` / `.rar` collections must be extracted first before placing
+the actual Mega Drive ROM files in `roms\md\`.
+
+
+# Game Stick M8 v6 Toolkit v3 — All-in-One
+
+A single-program toolkit for compatible **Game Stick Lite M8 v6** SD cards.
+
+v3 combines the previous DATA03 patcher and DBMaker into one application.
 
 ## Confirmed firmware
 
-The toolkit was tested successfully on real hardware whose internal `/version` reports:
+Confirmed working during development:
 
 ```text
 M8-20231122-release-v6.0
 ```
 
-The patcher is designed to accept firmware matching this pattern:
+The toolkit accepts firmware matching:
 
 ```text
 M8-YYYYMMDD-release-v6.0
 ```
 
-Examples that may be compatible:
+but only when the expected internal DATA03 structure is also detected.
 
-```text
-M8-20231021-release-v6.0
-M8-20231122-release-v6.0
-```
+This is **not** a universal Game Stick tool.
 
-However, the version string alone is **not enough**. Before changing anything, the patcher checks the internal `DATA03` structure and refuses to continue if the required M8 v6 database layout is not found.
-
-### Do not use this toolkit on unrelated families
-
-Examples include:
+Do not use it on unrelated families such as:
 
 ```text
 Q2
@@ -43,23 +58,76 @@ X2
 M88
 ```
 
-or any firmware that does not use the same M8 v6 internal database structure.
+unless that firmware has been separately analyzed and supported.
 
 ---
 
-## Files included
+# Main improvement in v3
+
+The end user no longer needs to place different scripts in different folders.
+
+The recommended final release is one Windows executable:
 
 ```text
-Patch_DATA03_M8_V6_v2.py
-DBMaker_M8_V6_v2.py
-1_CHECK_AND_PATCH_DATA03.bat
-2_BUILD_GAME_DATABASE.bat
-README.md
+GameStick_M8_V6_Toolkit_v3.exe
 ```
 
-### `Patch_DATA03_M8_V6_v2.py`
+Place it in the SD-card root:
 
-Checks the firmware and, if compatible, redirects:
+```text
+SD CARD
+│
+├── GameStick_M8_V6_Toolkit_v3.exe
+├── download
+├── res
+│   └── DATA03
+├── roms
+└── save
+```
+
+Run it and the toolkit automatically detects:
+
+```text
+res\DATA03
+roms\
+roms\img\
+```
+
+---
+
+# Interactive menu
+
+The program shows:
+
+```text
+1 - Check firmware compatibility
+2 - Patch DATA03
+3 - Build / rebuild game database
+4 - Full setup
+5 - Restore original DATA03 backup
+6 - Show detected SD-card path
+0 - Exit
+```
+
+## Option 1 — Check firmware compatibility
+
+Read-only.
+
+The toolkit checks:
+
+- DATA03 exists
+- compatible embedded EXT filesystem exists
+- `/version` exists
+- version matches `M8-YYYYMMDD-release-v6.0`
+- `/db/m8_game_list.db` exists
+- it is a compatible symbolic link
+- its current internal database target exists
+
+If any required check fails, the program reports the firmware as incompatible.
+
+## Option 2 — Patch DATA03
+
+The toolkit redirects:
 
 ```text
 /db/m8_game_list.db
@@ -71,304 +139,147 @@ to:
 /mnt/roms/simple_games_m8_2w.db
 ```
 
-### `DBMaker_M8_V6_v2.py`
-
-Scans compatible ROM folders and generates:
+Before modifying DATA03 it creates:
 
 ```text
-roms/simple_games_m8_2w.db
+res\DATA03.before_external_db.bak
 ```
 
-It also repairs ROM filenames containing extra dots and renames matching cover images.
+If DATA03 is already patched, no second patch is applied.
 
-### Batch files
+## Option 3 — Build / rebuild game database
 
-The two `.bat` files are Windows launchers. Each `.bat` file must stay in the **same folder as its matching `.py` file**.
-
----
-
-## Requirements
-
-- Windows
-- Python 3
-- A compatible Game Stick Lite M8 v6 SD card
-- Enough free space for a `DATA03` backup
-- No external Python packages are required
-
-The scripts use only Python's standard library.
-
-To check whether Python is installed, open Command Prompt and run:
-
-```bat
-python --version
-```
-
-If that does not work, try:
-
-```bat
-py --version
-```
-
----
-
-## Expected SD card structure
-
-A typical compatible card looks similar to this:
+The toolkit scans supported ROM folders and creates:
 
 ```text
-SD CARD
-│
-├── download
-│
-├── res
-│   ├── DATA01
-│   ├── DATA02
-│   ├── DATA03
-│   ├── DATA04
-│   ├── DATA05
-│   ├── DATA06
-│   ├── settings
-│   └── system.img
-│
-├── roms
-│   ├── atari
-│   ├── gb
-│   ├── gba
-│   ├── gbc
-│   ├── img
-│   ├── mame
-│   ├── md
-│   ├── nes
-│   ├── ps1
-│   ├── res
-│   └── sfc
-│
-└── save
+roms\simple_games_m8_2w.db
 ```
 
-Your card does not need every ROM folder, but the internal firmware structure must be compatible.
-
----
-
-# Step 1 — Check and patch DATA03
-
-Copy these two files into the SD card's **`res`** folder:
+If an older external database exists, it creates:
 
 ```text
-Patch_DATA03_M8_V6_v2.py
-1_CHECK_AND_PATCH_DATA03.bat
+roms\simple_games_m8_2w.db.bak
 ```
 
-They should be next to `DATA03`:
+The new SQLite database is verified before replacing the previous file.
+
+## Option 4 — Full setup
+
+Recommended for a new compatible card.
+
+It performs:
 
 ```text
-SD CARD
-└── res
-    ├── DATA03
-    ├── Patch_DATA03_M8_V6_v2.py
-    └── 1_CHECK_AND_PATCH_DATA03.bat
+Detect SD card
+↓
+Check firmware compatibility
+↓
+Create DATA03 backup
+↓
+Patch DATA03
+↓
+Fix ROM filenames with extra dots
+↓
+Rename matching covers
+↓
+Update PS1 CUE references
+↓
+Build game database
+↓
+Verify DATA03 link and database
 ```
 
-Then double-click:
+## Option 5 — Restore original DATA03
 
-```text
-1_CHECK_AND_PATCH_DATA03.bat
-```
-
-The patcher first performs a **read-only diagnostic**.
-
-A compatible card should show a report similar to:
-
-```text
-==============================================================
-GAME STICK M8 V6 - COMPATIBILITY REPORT
-==============================================================
-DATA03 found:              YES
-EXT2 structure detected:   YES
-Firmware version:          M8-20231122-release-v6.0
-M8 v6 version accepted:    YES
-/db/m8_game_list.db:       FOUND
-Symbolic link format:      OK
-Current database target:   game_list_64_2w_add_ps1.db
-Current database verified: YES
---------------------------------------------------------------
-RESULT: COMPATIBLE - SAFE TO PATCH
-==============================================================
-```
-
-If the result is:
-
-```text
-RESULT: NOT COMPATIBLE - NO CHANGES WILL BE MADE
-```
-
-**Stop there. Do not try to force the patch.**
-
-If the card is compatible, the program asks:
-
-```text
-Apply patch now? Type YES to continue:
-```
-
-Type exactly:
-
-```text
-YES
-```
-
-and press Enter.
-
-Before changing `DATA03`, the tool creates:
+Restores:
 
 ```text
 DATA03.before_external_db.bak
 ```
 
-After a successful patch, the firmware will use:
+back to:
 
 ```text
-/mnt/roms/simple_games_m8_2w.db
+DATA03
 ```
 
-as its game database.
+Before restoring, the currently patched DATA03 is preserved as:
 
-## Diagnostic-only mode
-
-If you only want to test compatibility without applying the patch, open Command Prompt inside the `res` folder and run:
-
-```bat
-python Patch_DATA03_M8_V6_v2.py --check
+```text
+DATA03.before_restore.bak
 ```
-
-If `python` is not recognized, try:
-
-```bat
-py Patch_DATA03_M8_V6_v2.py --check
-```
-
-This performs the compatibility check and exits without changing `DATA03`.
 
 ---
 
-# Step 2 — Build the game database
+# Automatic SD-card detection
 
-Copy these two files into the SD card's **`roms`** folder:
+The toolkit checks:
 
-```text
-DBMaker_M8_V6_v2.py
-2_BUILD_GAME_DATABASE.bat
-```
+1. the folder containing the EXE;
+2. the current folder;
+3. parent folders;
+4. Windows drive letters.
 
-The structure should look like:
-
-```text
-SD CARD
-└── roms
-    ├── atari
-    ├── gb
-    ├── gba
-    ├── gbc
-    ├── img
-    ├── mame
-    ├── md
-    ├── nes
-    ├── ps1
-    ├── sfc
-    ├── DBMaker_M8_V6_v2.py
-    └── 2_BUILD_GAME_DATABASE.bat
-```
-
-Then double-click:
+A valid root must contain:
 
 ```text
-2_BUILD_GAME_DATABASE.bat
+res\DATA03
+roms\
 ```
 
-The script will:
+If several compatible cards are found, the user is asked which one to use.
 
-1. Detect compatible console folders.
-2. Find ROM filenames containing extra dots.
-3. Rename those ROM files.
-4. Rename matching cover images under `roms/img`.
-5. Update PS1 `.cue` references when a referenced `.bin` is renamed.
-6. Scan the ROM folders.
-7. Generate a new SQLite database.
-8. Save it as `roms/simple_games_m8_2w.db`.
+You can also specify the root manually:
 
-If an older generated database already exists, the tool creates:
-
-```text
-simple_games_m8_2w.db.bak
+```bat
+GameStick_M8_V6_Toolkit_v3.exe --root E:\
 ```
-
-before replacing it.
 
 ---
 
-## Extra-dot filename repair
+# Extra-dot filename repair
 
-Some M8 database builders can have problems with ROM filenames containing multiple dots.
-
-For example:
+ROM files such as:
 
 ```text
 Super.Mario.World.sfc
 ```
 
-will be renamed to:
+are automatically renamed to:
 
 ```text
 SuperMarioWorld.sfc
 ```
 
-Only the extra dots are removed. The extension separator is preserved.
+The extension separator remains unchanged.
 
-The same applies to matching cover images.
+Matching cover images under `roms\img` are renamed too.
 
 Example:
 
 ```text
-roms/sfc/Super.Mario.World.sfc
-roms/img/sfc/Super.Mario.World.png
+roms\sfc\Super.Mario.World.sfc
+roms\img\sfc\Super.Mario.World.png
 ```
 
 becomes:
 
 ```text
-roms/sfc/SuperMarioWorld.sfc
-roms/img/sfc/SuperMarioWorld.png
+roms\sfc\SuperMarioWorld.sfc
+roms\img\sfc\SuperMarioWorld.png
 ```
 
-The image search is recursive under:
-
-```text
-roms/img
-```
-
-so matching covers may be inside console-specific subfolders.
+If the target filename already exists, nothing is overwritten.
 
 ---
 
-## Filename collision protection
+# PS1 BIN/CUE support
 
-The script does **not** overwrite files when removing dots would create a duplicate filename.
+If a PS1 BIN filename is changed, matching references inside `.cue` files are updated.
 
-Example:
+The builder also tries to avoid listing every BIN track from multi-track games as a separate title.
 
-```text
-Mario.World.sfc
-MarioWorld.sfc
-```
-
-In this case, the first file cannot safely be renamed because the target name already exists.
-
-The script prints a warning and leaves the original file unchanged.
-
----
-
-## PS1 BIN/CUE handling
-
-For PlayStation 1 games, the toolkit supports:
+Supported PS1 formats:
 
 ```text
 .iso
@@ -377,41 +288,9 @@ For PlayStation 1 games, the toolkit supports:
 .bin
 ```
 
-When a `.bin` filename is changed because it contains extra dots, the script also updates the corresponding reference inside `.cue` files.
-
-Example:
-
-Before:
-
-```text
-Game.Name.bin
-Game.Name.cue
-```
-
-with the `.cue` containing:
-
-```text
-FILE "Game.Name.bin" BINARY
-```
-
-After the automatic rename:
-
-```text
-GameName.bin
-GameName.cue
-```
-
-and the reference becomes:
-
-```text
-FILE "GameName.bin" BINARY
-```
-
-For multi-track BIN/CUE games, the database builder tries to avoid listing every track as a separate game.
-
 ---
 
-## Supported systems and extensions
+# Supported systems
 
 | System | Folder | Extensions | class_type | emu_type |
 |---|---|---|---:|---:|
@@ -428,182 +307,121 @@ For multi-track BIN/CUE games, the database builder tries to avoid listing every
 
 ---
 
-## Generated database format
+# Command-line modes
 
-The output is an SQLite database containing table:
-
-```text
-tbl_all
-```
-
-with these fields:
-
-```text
-game_id
-en_name
-cn_name
-cn_match
-suffix
-class_type
-emu_type
-img_name
-long_en_name
-```
-
-Output path:
-
-```text
-roms/simple_games_m8_2w.db
-```
-
----
-
-## Running manually from Command Prompt
-
-Instead of the `.bat` files, you can run the Python scripts manually.
-
-For the patcher:
+Compatibility check:
 
 ```bat
-cd /d E:\res
-python Patch_DATA03_M8_V6_v2.py
+GameStick_M8_V6_Toolkit_v3.exe --check
 ```
 
-For the database builder:
+Patch:
 
 ```bat
-cd /d E:\roms
-python DBMaker_M8_V6_v2.py
+GameStick_M8_V6_Toolkit_v3.exe --patch
 ```
 
-Replace `E:` with the actual drive letter of your SD card.
-
-If `python` is not recognized, use `py` instead.
-
----
-
-## Restoring the original DATA03
-
-If you need to undo the DATA03 patch:
-
-1. Remove the SD card from the Game Stick.
-2. Open the `res` folder on a computer.
-3. Keep a copy of the patched `DATA03` if you want to investigate it later.
-4. Replace `DATA03` with the backup `DATA03.before_external_db.bak`.
-5. Rename the restored backup back to `DATA03`.
-
----
-
-## Updating the game list later
-
-Once `DATA03` has already been successfully patched, you normally do **not** need to patch it again just because you added more games.
-
-To update the list:
-
-1. Add or remove ROMs in the appropriate folders.
-2. Add matching cover images if desired.
-3. Run `2_BUILD_GAME_DATABASE.bat` again.
-
-This rebuilds:
-
-```text
-simple_games_m8_2w.db
-```
-
-from the current ROM folders.
-
----
-
-## Important safety notes
-
-- Back up important SD card files before experimenting.
-- Never force the patch on firmware that reports `NOT COMPATIBLE`.
-- The patcher modifies the internal filesystem stored inside `DATA03`.
-- The automatically created `DATA03` backup requires additional free space on the SD card.
-- Firmware names alone do not guarantee compatibility.
-- A Game Stick may look identical externally and still use completely different hardware or firmware.
-- Safely eject the SD card from Windows before inserting it into the Game Stick.
-- This toolkit does not provide ROM files or copyrighted game content.
-
----
-
-## Troubleshooting
-
-### `python` is not recognized
-
-Try:
+Build database:
 
 ```bat
-py Patch_DATA03_M8_V6_v2.py
+GameStick_M8_V6_Toolkit_v3.exe --build
 ```
 
-or:
+Full setup:
 
 ```bat
-py DBMaker_M8_V6_v2.py
+GameStick_M8_V6_Toolkit_v3.exe --full
 ```
 
-If neither command works, install Python 3.
+Restore:
 
-### `DATA03 was not found`
-
-Make sure `Patch_DATA03_M8_V6_v2.py` is inside the SD card's `res` folder, next to `DATA03`.
-
-### `RESULT: NOT COMPATIBLE`
-
-Do not patch the file. The stick may use a different M8 revision or a completely different firmware layout.
-
-### Games do not appear
-
-Check that this file was created successfully:
-
-```text
-roms/simple_games_m8_2w.db
+```bat
+GameStick_M8_V6_Toolkit_v3.exe --restore
 ```
 
-Also verify that the ROM files are in the correct folders and use supported extensions.
+Manual SD-card path:
 
-### Game appears but cover does not
-
-The cover filename should match the ROM filename stem.
-
-Example:
-
-```text
-roms/nes/MegaMan2.nes
-roms/img/nes/MegaMan2.png
+```bat
+GameStick_M8_V6_Toolkit_v3.exe --root E:\ --check
 ```
+
+For automated testing, `--yes` skips confirmation:
+
+```bat
+GameStick_M8_V6_Toolkit_v3.exe --root E:\ --full --yes
+```
+
+Use `--yes` only when you already know the correct card was selected.
 
 ---
 
-## Recommended first test on an unconfirmed firmware revision
+# Build the Windows EXE
 
-1. Run the patcher in diagnostic-only mode.
-2. Confirm that every compatibility check passes.
-3. Keep an additional copy of `DATA03`.
-4. Add only a few test ROMs.
-5. Build the database.
-6. Test the SD card in the Game Stick.
-7. Only after successful testing, add the full ROM collection.
-
----
-
-## Project status
-
-Confirmed working on:
+The repository includes:
 
 ```text
-M8-20231122-release-v6.0
+BUILD_WINDOWS_EXE.bat
 ```
 
-Other `M8-YYYYMMDD-release-v6.0` revisions should be considered **potentially compatible only when the diagnostic report passes all checks**.
+Run it on Windows.
 
-If you test another revision successfully, please post the internal `/version` value and results so compatibility can be documented for other users.
+It installs PyInstaller and creates:
+
+```text
+dist\GameStick_M8_V6_Toolkit_v3.exe
+```
+
+Once built, the end user only needs the `.exe`.
+
+Python is not required on the end user's computer.
 
 ---
 
-## Disclaimer
+# GitHub Actions
+
+The repository also contains:
+
+```text
+.github\workflows\build-windows-exe.yml
+```
+
+The workflow can automatically build the Windows EXE:
+
+- manually from the GitHub **Actions** tab;
+- automatically when a version tag such as `v3.0` is pushed.
+
+The generated EXE is uploaded as a GitHub Actions artifact.
+
+---
+
+# Recommended GitHub release contents
+
+For a public release, publish:
+
+```text
+GameStick_M8_V6_Toolkit_v3.exe
+```
+
+as the main download.
+
+Keep the Python source code in the repository so users can review the implementation.
+
+---
+
+# Safety notes
+
+- Make a backup before experimenting with firmware.
+- Never force a patch after an incompatible result.
+- External appearance does not identify a Game Stick firmware family.
+- Two visually identical sticks can contain different boards and firmware.
+- Safely eject the SD card before inserting it into the Game Stick.
+- The project does not provide ROMs or copyrighted game content.
+- The DATA03 patch modifies an embedded filesystem and is intentionally limited to firmware that passes all compatibility checks.
+
+---
+
+# Disclaimer
 
 Use at your own risk.
 
-This is an unofficial community tool and is not affiliated with the Game Stick manufacturer or firmware authors. Always keep backups before modifying firmware-related files.
+This is an unofficial community project and is not affiliated with the Game Stick manufacturer or firmware authors.
